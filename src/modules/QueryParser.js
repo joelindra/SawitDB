@@ -28,30 +28,42 @@ class QueryParser {
             switch (cmd) {
                 case 'LAHAN':
                 case 'CREATE':
-                    if (tokens[1] && tokens[1].toUpperCase() === 'INDEX') return this.parseCreateIndex(tokens);
-                    return this.parseCreate(tokens);
+                    if (tokens[1] && tokens[1].toUpperCase() === 'INDEX') {
+                        command = this.parseCreateIndex(tokens);
+                    } else {
+                        command = this.parseCreate(tokens);
+                    }
+                    break;
                 case 'LIHAT':
                 case 'SHOW':
-                    return this.parseShow(tokens);
+                    command = this.parseShow(tokens);
+                    break;
                 case 'TANAM':
                 case 'INSERT':
-                    return this.parseInsert(tokens);
+                    command = this.parseInsert(tokens);
+                    break;
                 case 'PANEN':
                 case 'SELECT':
-                    return this.parseSelect(tokens);
+                    command = this.parseSelect(tokens);
+                    break;
                 case 'GUSUR':
                 case 'DELETE':
-                    return this.parseDelete(tokens);
+                    command = this.parseDelete(tokens);
+                    break;
                 case 'PUPUK':
                 case 'UPDATE':
-                    return this.parseUpdate(tokens);
+                    command = this.parseUpdate(tokens);
+                    break;
                 case 'BAKAR':
                 case 'DROP':
-                    return this.parseDrop(tokens);
+                    command = this.parseDrop(tokens);
+                    break;
                 case 'INDEKS':
-                    return this.parseCreateIndex(tokens);
+                    command = this.parseCreateIndex(tokens);
+                    break;
                 case 'HITUNG':
-                    return this.parseAggregate(tokens);
+                    command = this.parseAggregate(tokens);
+                    break;
                 default:
                     throw new Error(`Perintah tidak dikenal: ${cmd}`);
             }
