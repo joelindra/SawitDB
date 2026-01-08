@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const SawitDB = require('./WowoEngine');
 const path = require('path');
 const fs = require('fs');
+const { parentPort, workerData, isMainThread } = require('worker_threads');
 
 /**
  * SawitDB Server - Network Database Server
@@ -28,6 +29,7 @@ class SawitServer {
             errors: 0,
             startTime: Date.now()
         };
+        this.config = config; // Store full config for worker_threads check
 
         // Ensure data directory exists
         if (!fs.existsSync(this.dataDir)) {
@@ -122,14 +124,19 @@ class SawitServer {
         this.server = net.createServer((socket) => this.#handleConnection(socket));
 
         this.server.listen(this.port, this.host, () => {
-            console.log(`╔══════════════════════════════════════════════════╗`);
-            console.log(`║         🌴 SawitDB Server - Version 2.6.0        ║`);
-            console.log(`╚══════════════════════════════════════════════════╝`);
-            console.log(`[Server] Listening on ${this.host}:${this.port}`);
+            const cluster = require('cluster');
+            const prefix = cluster.isWorker ? `[Worker ${cluster.worker.id}]` : '[Server]';
+
+            if (!cluster.isWorker) {
+                console.log(`╔══════════════════════════════════════════════════╗`);
+                console.log(`║         🌴 SawitDB Server - Version 2.6.0        ║`);
+                console.log(`╚══════════════════════════════════════════════════╝`);
+            }
+            console.log(`${prefix} Listening on ${this.host}:${this.port}`);
             console.log(
-                `[Server] Protocol: sawitdb://${this.host}:${this.port}/[database]`
+                `${prefix} Protocol: sawitdb://${this.host}:${this.port}/[database]`
             );
-            console.log(`[Server] Ready to accept connections...`);
+            console.log(`${prefix} Ready to accept connections...`);
         });
 
         this.server.on('error', (err) => {
@@ -142,7 +149,7 @@ class SawitServer {
 
         // Close all client connections
         for (const client of this.clients) {
-            client.destroy();
+            client.end(); // Graceful shutdown
         }
 
         // Close all open databases to release file locks
@@ -319,7 +326,8 @@ class SawitServer {
             uptime,
             uptimeFormatted: this.#formatUptime(uptime),
             databases: this.databases.size,
-            memoryUsage: process.memoryUsage()
+            memoryUsage: process.memoryUsage(),
+            workers: this.threadPool ? this.threadPool.getStats() : null,
         };
 
         this.#sendResponse(socket, {
@@ -392,7 +400,7 @@ class SawitServer {
         }
     }
 
-    #handleQuery(socket, payload, context) {
+    async #handleQuery(socket, payload, context) {
         const { query, params } = payload;
         const startTime = Date.now();
 
@@ -612,11 +620,20 @@ class SawitServer {
         }
 
         try {
-            const db = this.#getOrCreateDatabase(context.currentDatabase);
-            const result = db.query(query, params);
-            const duration = Date.now() - startTime;
+            let result;
+            if (this.threadPool) {
+                // Offload to Worker Thread
+                const dbPath = path.join(this.dataDir, `${context.currentDatabase}.sawit`);
+                result = await this.threadPool.execute(dbPath, query, this.walConfig);
+            } else {
+                // Local Execution
+                const db = this.#getOrCreateDatabase(context.currentDatabase);
+                result = await Promise.resolve(db.query(query, params));
+            }
 
+            const duration = Date.now() - startTime;
             this.stats.totalQueries++;
+
             this.#log(
                 'debug',
                 `Query executed in ${duration}ms: ${query.substring(0, 50)}...`
@@ -716,25 +733,6 @@ module.exports = SawitServer;
 
 // Allow running as standalone server
 if (require.main === module) {
-    const server = new SawitServer({
-        port: process.env.SAWIT_PORT || 7878,
-        host: process.env.SAWIT_HOST || '0.0.0.0',
-        dataDir: process.env.SAWIT_DATA_DIR || path.join(__dirname, '../data')
-        // Optional auth: { username: 'petani', password: 'sawit123' }
-    });
-
-    server.start();
-
-    // Graceful shutdown
-    process.on('SIGINT', () => {
-        console.log('\n[Server] Received SIGINT, shutting down gracefully...');
-        server.stop();
-        process.exit(0);
-    });
-
-    process.on('SIGTERM', () => {
-        console.log('\n[Server] Received SIGTERM, shutting down gracefully...');
-        server.stop();
-        process.exit(0);
-    });
+    const ClusterManager = require('./modules/ClusterManager');
+    ClusterManager.start(SawitServer);
 }

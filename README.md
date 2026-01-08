@@ -36,6 +36,8 @@ Please support our brothers and sisters in Aceh.
 - **Transparansi**: Query language is clear. No "Pasal Karet" (Ambiguous Laws) or "Rapat Tertutup" in 5-star hotels.
 - **Speed**: Faster than printing an e-KTP at the Kelurahan.
 - **Network Support (NEW)**: Client-Server architecture with Multi-database support and Authentication.
+- **True Multi-Threading (NEW)**: Worker Pool architecture separates IO (Main Thread) from CPU (Worker Threads).
+- **Advanced SQL (NEW)**: Support for `JOIN` (Left/Right/Full/Cross), `JAVING`, `DISTINCT`, and more.
 - **NPM Support (NEW)**: Install via `npm install @wowoengine/sawitdb`.
 
 ## Filosofi
@@ -49,13 +51,16 @@ SawitDB is built with the spirit of "Data Sovereignty". We believe a reliable da
 ## File List
 
 - `src/WowoEngine.js`: Core Database Engine (Class: `SawitDB`).
+- `src/SawitServer.js`: Server Class (TCP/Auth/ThreadPool).
+- `src/SawitClient.js`: Client Class.
+- `src/modules/ThreadPool.js`: Worker Pool Manager.
+- `src/SawitWorker.js`: Worker Entry Point.
 - `bin/sawit-server.js`: Server executable.
 - `cli/local.js`: Interactive CLI tool (Local).
 - `cli/remote.js`: Interactive CLI tool (Network).
-- [CHANGELOG.md](CHANGELOG.md): Version history and release notes.
 - `cli/test.js`: Unit Test Suite.
 - `cli/benchmark.js`: Performance Benchmark Tool.
-- `examples/`: Sample scripts.
+- [CHANGELOG.md](CHANGELOG.md): Version history.
 
 ## Installation
 
@@ -65,16 +70,21 @@ Install via NPM:
 npm install @wowoengine/sawitdb
 ```
 
-## Quick Start (Network Edition)
+## Quick Start
 
 ### 1. Start the Server
 ```bash
-node src/SawitServer.js
+node bin/sawit-server.js
+# Or with Cluster Mode enabled in .env
 ```
 The server will start on `0.0.0.0:7878` by default.
 
 ### 2. Connect with Client
-Use [SawitClient](#client-api) or any interactive session.
+You can use the built-in CLI tool:
+```bash
+node cli/remote.js
+```
+Or use the `SawitClient` class in your Node.js application.
 
 ---
 
@@ -214,9 +224,15 @@ EXPLAIN SELECT * FROM users WHERE id = 5
 
 ## Architecture Details
 
-- **Modular Codebase**: Engine logic separated into `src/modules/` (`Pager.js`, `QueryParser.js`, `BTreeIndex.js`) for better maintainability.
-- **Page 0 (Master Page)**: Contains header and Table Directory.
-- **Data & Indexes**: Stored in 4KB atomic pages.
+- **Worker Pool (Multi-threaded)**:
+    - **Main Thread**: Handles strictly I/O (Networking, Protocol Parsing).
+    - **Worker Threads**: Execute queries in parallel using `Least-Busy` Load Balancing.
+    - **Fault Tolerance**: Automatic worker healing and stuck-query rejection.
+- **Storage Engine**:
+    - **Hybrid Paging**: 4KB binary pages with In-Memory Object Cache for hot data.
+    - **WAL (Write-Ahead Log)**: Ensures ACID properties and crash recovery.
+    - **B-Tree Indexing**: O(log n) lookups for high performance.
+- **Modular Codebase**: Core logic separated into `src/modules/` (`Pager.js`, `ThreadPool.js`, `BTreeIndex.js`).
 
 ## Benchmark Performance
 Test Environment: Single Thread, Windows Node.js (Local NVMe)
@@ -229,7 +245,7 @@ Test Environment: Single Thread, Windows Node.js (Local NVMe)
 | **UPDATE (Indexed)** | ~11,000 | 0.090 ms |
 | **DELETE (Indexed)** | ~19,000 | 0.052 ms |
 
-*Note: Hasil dapat bervariasi tergantung hardware.*
+*Note: Hasil diatas adalah benchmark Internal (Engine-only). Untuk Network Benchmark (Cluster Mode), TPS berkisar ~20.000 (overhead jaringan).*
 
 ## Full Feature Comparison
 

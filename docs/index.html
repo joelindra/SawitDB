@@ -320,6 +320,12 @@
                             markups.</p>
                     </div>
                     <div class="glass-card p-6 rounded-xl hover:bg-white/5 transition-all group">
+                        <h3 class="font-bold text-xl text-green-400 mb-2 group-hover:text-green-300">True
+                            Multi-Threading</h3>
+                        <p class="text-gray-400 text-sm">Worker Pool architecture separates IO from Compute. High
+                            concurrency with auto-healing workers.</p>
+                    </div>
+                    <div class="glass-card p-6 rounded-xl hover:bg-white/5 transition-all group">
                         <h3 class="font-bold text-xl text-green-400 mb-2 group-hover:text-green-300">Transparansi</h3>
                         <p class="text-gray-400 text-sm">Clear query language. No "Pasal Karet" (ambiguous laws).</p>
                     </div>
@@ -848,7 +854,7 @@
 
                 <div class="grid md:grid-cols-2 gap-6 mb-8">
                     <div class="glass-card p-5 rounded-lg border border-white/10">
-                        <h4 class="font-bold text-white mb-2">MongoDB - Style Connection</h4>
+                        <h4 class="font-bold text-white mb-2">Connection</h4>
                         <code
                             class="text-sm bg-black/30 p-1 block rounded text-gray-300">sawitdb://host:port/database</code>
                     </div>
@@ -951,24 +957,34 @@
                 <h2 class="text-3xl font-bold text-white mb-8 border-b border-white/10 pb-4">Latest Updates</h2>
                 <div class="space-y-6">
                     <!-- v2.6.0 -->
-                    <div class="relative pl-8 border-l-2 border-green-500/30">
+                    <div class="relative pl-8 border-l-2 border-amber-500/30">
                         <div
-                            class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-green-500 border-4 border-gray-900">
+                            class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-amber-500 border-4 border-gray-900">
                         </div>
                         <div class="flex items-center gap-3 mb-2">
                             <h3 class="text-xl font-bold text-white">v2.6.0</h3>
                             <span
-                                class="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400 border border-green-500/20">Latest</span>
-                            <span class="text-sm text-gray-400">Jan 2026</span>
+                                class="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/20">Upcoming!</span>
+                            <span class="text-sm text-gray-400">Coming Soon</span>
                         </div>
-                        <ul class="list-disc list-outside text-gray-300 text-sm space-y-1 ml-4">
-                            <li><strong>JOIN Types:</strong> Added LEFT, RIGHT, FULL OUTER, and CROSS JOIN support.</li>
-                            <li><strong>DISTINCT:</strong> Remove duplicate rows with <code class="text-green-400">SELECT DISTINCT</code>.</li>
-                            <li><strong>HAVING:</strong> Filter grouped results after aggregation.</li>
-                            <li><strong>EXPLAIN:</strong> Analyze query execution plan before running.</li>
-                            <li><strong>Security:</strong> Password hashing (SHA-256), timing-safe auth, input validation.</li>
-                            <li><strong>Performance:</strong> B-Tree binary search, true LRU cache, optimized aggregates.</li>
-                            <li><strong>Bug Fixes:</strong> Fixed _deleteFullScan(), duplicate code, division by zero in AVG.</li>
+                        <ul class="list-disc list-outside text-gray-300 text-sm space-y-2 ml-4">
+                            <li><strong>True Multi-Threading:</strong> Worker Pool architecture with Least-Busy Load
+                                Balancing & Auto-Healing.</li>
+                            <li><strong>SQL Features:</strong>
+                                <ul class="list-disc ml-4 mt-1 text-gray-400 space-y-1">
+                                    <li><strong>JOINs:</strong> LEFT, RIGHT, FULL OUTER, CROSS (<code
+                                            class="text-green-400">GABUNG...</code>).</li>
+                                    <li><strong>DISTINCT:</strong> Remove duplicate rows.</li>
+                                    <li><strong>HAVING:</strong> Filter grouped results.</li>
+                                    <li><strong>EXPLAIN:</strong> Analyze query plans.</li>
+                                </ul>
+                            </li>
+                            <li><strong>Security:</strong> SHA-256 Hashing, Timing-Safe Auth, Input Validation, Regex
+                                Injection Fix.</li>
+                            <li><strong>Performance:</strong> Query Cloning (vs JSON.parse), True LRU Cache, B-Tree
+                                Binary Search, Optimized Aggregates.</li>
+                            <li><strong>Bug Fixes:</strong> Fixed <code class="text-red-300">_deleteFullScan</code>,
+                                code duplication, AVG division by zero, and buffer leaks.</li>
                         </ul>
                     </div>
 
@@ -982,7 +998,8 @@
                             <span class="text-sm text-gray-500">Jan 2026</span>
                         </div>
                         <ul class="list-disc list-outside text-gray-400 text-sm space-y-1 ml-4">
-                            <li><strong>Performance:</strong> Object Caching & Async WAL achieved ~247,000 TPS for reads.</li>
+                            <li><strong>Performance:</strong> Object Caching & Async WAL achieved ~247,000 TPS for
+                                reads.</li>
                             <li><strong>Hash Join:</strong> Complex joins are now 77x Faster (O(M+N)).</li>
                             <li><strong>New Tools:</strong> Added CLI Unit Tests and Benchmarking Tool.</li>
                             <li><strong>Persistence Fix:</strong> Fixed Index loss on restart.</li>

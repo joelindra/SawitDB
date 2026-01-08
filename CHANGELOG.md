@@ -2,10 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v2.6.0] - 2026-01-07
+## [v2.6.0] - Upcoming!
 
-###  More SQL Features
+### ⚡ True Multi-Threading (Worker Pool)
+- **Worker Pool Architecture**: Migrated from `cluster` module to `worker_threads` for true parallelism.
+- **IO/CPU Separation**: Main thread handles Networking (IO), Worker threads handle Query Execution (CPU).
+- **High Concurrency**: Architecture supports thousands of concurrent connections without blocking.
+- **Load Balancing**: Implemented "Least-Busy" strategy to distribute queries to the least loaded worker.
+- **Fault Tolerance**:
+    - **Auto-Healing**: Workers automatically restart upon crash.
+    - **Anti-Stuck**: Pending queries on crashed workers are immediately rejected/cleaned up.
+- **Per-Worker Stats**: New `stats` command output shows query distribution and active load per worker.
 
+### 🚀 SQL Features
 #### JOIN Enhancements
 - **LEFT OUTER JOIN**: Returns all rows from left table, NULL for unmatched right rows
 - **RIGHT OUTER JOIN**: Returns all rows from right table, NULL for unmatched left rows
@@ -46,30 +55,23 @@ EXPLAIN SELECT * FROM users WHERE id = 5
 -- Returns: { type: "SELECT", steps: [{ operation: "INDEX SCAN", method: "B-Tree Index Lookup" }] }
 ```
 
-###  Security Improvements
+### 🔒 Security Improvements
 - **Password Hashing**: Server authentication now uses SHA-256 with random salt
 - **Timing-Safe Comparison**: Prevents timing attacks on password verification
 - **Input Validation**: Table and column names validated against injection
 - **Regex Injection Fix**: LIKE operator now escapes regex metacharacters
 
-###  Performance Optimizations
-- **Query Cache**: Replaced expensive `JSON.parse(JSON.stringify())` with shallow clone
+### 🛠 Performance & Code Quality
+- **Query Cache**: Replaced expensive `JSON.parse` with shallow clone
 - **True LRU Cache**: Pager now properly tracks access order for eviction
 - **B-Tree Binary Search**: Index operations now use O(log n) binary search
-- **Aggregate Functions**: MIN/MAX use single-pass loop instead of spread operator (prevents stack overflow on large datasets)
-- **Reduced JSON Parsing**: DELETE/UPDATE operations parse JSON once instead of multiple times
-
-###  Bug Fixes
-- **Fixed `_deleteFullScan()`**: Method was passing undefined table name
-- **Removed duplicate code**: Cleaned up duplicate `_loadIndexes()`, pager checks, and exports
-- **Division by zero**: AVG now returns `null` for empty datasets instead of `Infinity`
-- **Type safety**: Added `parseInt` radix, changed loose equality (`==`) to strict (`===`)
-- **Buffer pool leak**: Buffers now returned to pool on read errors
-
-###  Code Quality
-- Removed duplicate method definitions
-- Added proper error handling for empty catch blocks
-- Improved code comments and documentation
+- **Optimized Aggregates**: MIN/MAX use single-pass loop (prevents stack overflow)
+- **Reduced JSON Parsing**: DELETE/UPDATE operations optimize parsing overhead
+- **Bug Fixes**:
+    - Fixed `_deleteFullScan()` undefined table name
+    - Cleaned up duplicate code (`_loadIndexes`, pager checks)
+    - AVG now returns `null` for empty datasets
+    - Fixed buffer pool leaks on read errors
 
 ---
 

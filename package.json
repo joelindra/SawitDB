@@ -8,11 +8,14 @@
   "main": "src/WowoEngine.js",
   "scripts": {
     "start": "node bin/sawit-server.js",
+    "start:cluster": "set SAWIT_CLUSTER_MODE=true && node bin/sawit-server.js",
     "server": "node bin/sawit-server.js",
-    "test": "node tests/test_server_injection.js",
+    "test": "node cli/test.js",
     "example": "node examples/example_client.js",
     "cli": "node cli/remote.js sawitdb://localhost:7878/default",
-    "dev": "SAWIT_LOG_LEVEL=debug node bin/sawit-server.js"
+    "dev": "set SAWIT_LOG_LEVEL=debug && node bin/sawit-server.js",
+    "bench": "node cli/benchmark.js --spawn --workers=1 --clients=1",
+    "bench:cluster": "node cli/benchmark.js --spawn --cluster --workers=4 --clients=10"
   },
   "keywords": [
     "database",
