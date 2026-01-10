@@ -15,7 +15,22 @@ class DatabaseRegistry {
         }
     }
 
+    validateName(name) {
+        if (!name || typeof name !== 'string') {
+            throw new Error("Database name required");
+        }
+        // Prevent Path Traversal and illegal chars
+        if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+            throw new Error("Invalid database name. Only alphanumeric, hyphen, and underscore allowed.");
+        }
+        if (name.includes('..') || name.includes('/') || name.includes('\\')) {
+            throw new Error("Invalid database name (Path Traversal attempt).");
+        }
+        return true;
+    }
+
     get(name) {
+        this.validateName(name);
         return this.getOrCreate(name);
     }
 
@@ -34,11 +49,12 @@ class DatabaseRegistry {
     }
 
     create(name) {
-        // Just instantiate it, WowoEngine creates the file
+        this.validateName(name);
         return this.getOrCreate(name);
     }
 
     drop(name) {
+        this.validateName(name);
         const dbPath = path.join(this.dataDir, `${name}.sawit`);
         if (!fs.existsSync(dbPath)) {
             throw new Error(`Database '${name}' does not exist`);
