@@ -4,7 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [v2.6.0] - Upcoming!
 
-### ⚡ True Multi-Threading (Worker Pool)
+### Modular Architecture (Codebase Refactor)
+- **Service-Oriented Core**: Split monolithic `WowoEngine.js` into specialized modules:
+    - **Logic Services**: `ConditionEvaluator.js`, `JoinProcessor.js`.
+    - **Managers**: `TableManager.js`, `IndexManager.js`.
+    - **Executors**: Dedicated classes (Strategy Pattern) for `Select`, `Insert`, `Update`, `Delete`, `Aggregate`.
+- **Server modularity**: Split `SawitServer.js` into `AuthManager.js`, `ClientSession.js`, `RequestRouter.js`, and `DatabaseRegistry.js`.
+- **Maintainability**: Reduced file size complexity by ~60%, enabling easier feature expansion.
+
+### True Multi-Threading (Worker Pool)
 - **Worker Pool Architecture**: Migrated from `cluster` module to `worker_threads` for true parallelism.
 - **IO/CPU Separation**: Main thread handles Networking (IO), Worker threads handle Query Execution (CPU).
 - **High Concurrency**: Architecture supports thousands of concurrent connections without blocking.
@@ -14,48 +22,32 @@ All notable changes to this project will be documented in this file.
     - **Anti-Stuck**: Pending queries on crashed workers are immediately rejected/cleaned up.
 - **Per-Worker Stats**: New `stats` command output shows query distribution and active load per worker.
 
-### 🚀 SQL Features
+### AQL Syntax Parity (Agricultural Query Language)
+Full feature parity with Generic SQL. You can now use AQL for advanced queries:
+- **JOINs**: `GABUNG` (Inner), `GABUNG KIRI` (Left), `GABUNG KANAN` (Right), `GABUNG SILANG` (Cross).
+- **Ordering**: `URUTKAN BERDASARKAN [field] NAIK|TURUN` (Order By).
+- **Pagination**: `HANYA [n]` (Limit), `MULAI DARI [n]` (Offset).
+- **Grouping**: `KELOMPOK [field]` (Group By), `DENGAN SYARAT` (Having).
+- **Compatibility**: Standard SQL syntax (`JOIN`, `ORDER BY`, `LIMIT`) remains fully supported alongside AQL.
+
+### Advanced SQL Features
 #### JOIN Enhancements
 - **LEFT OUTER JOIN**: Returns all rows from left table, NULL for unmatched right rows
 - **RIGHT OUTER JOIN**: Returns all rows from right table, NULL for unmatched left rows
 - **FULL OUTER JOIN**: Returns all rows from both tables with NULL for non-matches
 - **CROSS JOIN**: Cartesian product (no ON clause required)
-- AQL equivalents: `GABUNG KIRI`, `GABUNG KANAN`, `GABUNG SILANG`
 
 ```sql
 -- LEFT JOIN example
 SELECT * FROM employees LEFT JOIN departments ON employees.dept_id = departments.id
-
--- CROSS JOIN example
-SELECT * FROM colors CROSS JOIN sizes
 ```
 
-#### DISTINCT Keyword
-- Remove duplicate rows from query results
-- Applied after column projection for correct behavior
+#### DISTINCT & AGGREGATE
+- **DISTINCT**: `SELECT DISTINCT category FROM products` (or `PANEN UNIK ...`) to remove duplicates.
+- **HAVING Clause**: `GROUP BY region HAVING count > 5` to filter aggregated results.
+- **EXPLAIN Query Plan**: `EXPLAIN SELECT ...` to analyze execution strategy, index usage, and cost.
 
-```sql
-SELECT DISTINCT category FROM products
-```
-
-#### HAVING Clause
-- Filter grouped results after aggregation
-- Supports: `=`, `!=`, `<>`, `>`, `<`, `>=`, `<=`
-
-```sql
-HITUNG COUNT(*) DARI sales GROUP BY region HAVING count > 5
-```
-
-#### EXPLAIN Query Plan
-- Analyze query execution strategy before running
-- Shows: scan type, index usage, join methods, processing steps
-
-```sql
-EXPLAIN SELECT * FROM users WHERE id = 5
--- Returns: { type: "SELECT", steps: [{ operation: "INDEX SCAN", method: "B-Tree Index Lookup" }] }
-```
-
-### 🔒 Security Improvements
+### Security Improvements
 - **Password Hashing**: Server authentication now uses SHA-256 with random salt
 - **Timing-Safe Comparison**: Prevents timing attacks on password verification
 - **Input Validation**: Table and column names validated against injection
