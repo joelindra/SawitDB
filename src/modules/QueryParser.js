@@ -85,10 +85,25 @@ class QueryParser {
                     command = { type: 'ROLLBACK' };
                     break;
                 case 'PASANG':
-                    command = this.parseCreateView(tokens);
+                    command = this.parseCreateViewOrTrigger(tokens);
                     break;
                 case 'BUANG':
-                    command = this.parseDropView(tokens);
+                    command = this.parseDropViewOrTrigger(tokens);
+                    break;
+                case 'SERTIFIKASI':
+                    command = this.parseSchemaDefinition(tokens);
+                    break;
+                case 'SIMPAN':
+                    command = this.parseStoredProcedure(tokens);
+                    break;
+                case 'JALANKAN':
+                    command = this.parseExecuteProcedure(tokens);
+                    break;
+                case 'CADANGKAN':
+                    command = this.parseBackup(tokens);
+                    break;
+                case 'PULIHKAN':
+                    command = this.parseRestore(tokens);
                     break;
                 default:
                     throw new Error(`Perintah tidak dikenal: ${cmd}`);
@@ -124,12 +139,14 @@ class QueryParser {
         if (cmd === 'LIHAT') {
             if (sub === 'LAHAN') return { type: 'SHOW_TABLES' };
             if (sub === 'INDEKS') return { type: 'SHOW_INDEXES', table: tokens[2] || null };
+            if (sub === 'STATISTIK') return { type: 'SHOW_STATS', table: tokens[2] || null };
         } else if (cmd === 'SHOW') {
             if (sub === 'TABLES') return { type: 'SHOW_TABLES' };
             if (sub === 'INDEXES') return { type: 'SHOW_INDEXES', table: tokens[2] || null };
+            if (sub === 'STATS') return { type: 'SHOW_STATS', table: tokens[2] || null };
         }
 
-        throw new Error("Syntax: LIHAT LAHAN | SHOW TABLES | LIHAT INDEKS [table] | SHOW INDEXES");
+        throw new Error("Syntax: LIHAT LAHAN | SHOW TABLES | LIHAT INDEKS [table] | SHOW INDEXES | LIHAT STATISTIK [table] | SHOW STATS");
     }
 
     parseDrop(tokens) {
@@ -824,6 +841,19 @@ class QueryParser {
         return { type: 'BEGIN_TRANSACTION' };
     }
 
+    parseCreateViewOrTrigger(tokens) {
+        // PASANG TEROPONG [nama] SEBAGAI [SELECT query]
+        // PASANG KENTONGAN [nama] PADA [BEFORE|AFTER] [INSERT|UPDATE|DELETE] [table] LAKUKAN [query]
+
+        if (tokens[1].toUpperCase() === 'TEROPONG') {
+            return this.parseCreateView(tokens);
+        } else if (tokens[1].toUpperCase() === 'KENTONGAN') {
+            return this.parseCreateTrigger(tokens);
+        }
+
+        throw new Error("Syntax: PASANG TEROPONG [nama] ... or PASANG KENTONGAN [nama] ...");
+    }
+
     parseCreateView(tokens) {
         // PASANG TEROPONG [nama] SEBAGAI [SELECT query]
         if (tokens[0].toUpperCase() !== 'PASANG') {
@@ -850,6 +880,19 @@ class QueryParser {
         return { type: 'CREATE_VIEW', viewName, selectCommand };
     }
 
+    parseDropViewOrTrigger(tokens) {
+        // BUANG TEROPONG [nama]
+        // BUANG KENTONGAN [nama]
+
+        if (tokens[1].toUpperCase() === 'TEROPONG') {
+            return this.parseDropView(tokens);
+        } else if (tokens[1].toUpperCase() === 'KENTONGAN') {
+            return this.parseDropTrigger(tokens);
+        }
+
+        throw new Error("Syntax: BUANG TEROPONG [nama] or BUANG KENTONGAN [nama]");
+    }
+
     parseDropView(tokens) {
         // BUANG TEROPONG [nama]
         if (tokens[0].toUpperCase() !== 'BUANG') {
@@ -866,6 +909,235 @@ class QueryParser {
         }
 
         return { type: 'DROP_VIEW', viewName };
+    }
+
+    parseSchemaDefinition(tokens) {
+        // SERTIFIKASI LAHAN [table] ( [col] [type], ... )
+        if (tokens[0].toUpperCase() !== 'SERTIFIKASI') {
+            throw new Error("Syntax: SERTIFIKASI LAHAN [table] (...)");
+        }
+
+        if (tokens[1].toUpperCase() !== 'LAHAN') {
+            throw new Error("Expected LAHAN after SERTIFIKASI");
+        }
+
+        const tableName = tokens[2];
+        if (!tableName) {
+            throw new Error("Table name required");
+        }
+
+        // Parse schema definition: (col1 TYPE1, col2 TYPE2, ...)
+        let i = 3;
+        if (tokens[i] !== '(') {
+            throw new Error("Expected ( after table name");
+        }
+        i++;
+
+        const schema = {};
+        while (tokens[i] !== ')') {
+            const fieldName = tokens[i];
+            i++;
+            const fieldType = tokens[i];
+            i++;
+
+            // Check for optional modifiers
+            let required = false;
+            let defaultValue = undefined;
+
+            while (i < tokens.length && tokens[i] !== ',' && tokens[i] !== ')') {
+                const modifier = tokens[i].toUpperCase();
+                if (modifier === 'WAJIB' || modifier === 'REQUIRED') {
+                    required = true;
+                    i++;
+                } else if (modifier === 'DEFAULT' || modifier === 'BAWAAN') {
+                    i++;
+                    defaultValue = tokens[i];
+                    // Parse default value
+                    if (defaultValue.startsWith("'") || defaultValue.startsWith('"')) {
+                        defaultValue = defaultValue.slice(1, -1);
+                    } else if (!isNaN(defaultValue)) {
+                        defaultValue = Number(defaultValue);
+                    }
+                    i++;
+                } else {
+                    break;
+                }
+            }
+
+            schema[fieldName] = { type: fieldType, required, default: defaultValue };
+
+            if (tokens[i] === ',') i++;
+        }
+
+        return { type: 'DEFINE_SCHEMA', table: tableName, schema };
+    }
+
+    parseCreateTrigger(tokens) {
+        // PASANG KENTONGAN [nama] PADA [BEFORE|AFTER] [INSERT|UPDATE|DELETE] [table] LAKUKAN [query]
+        if (tokens[0].toUpperCase() !== 'PASANG' || tokens[1].toUpperCase() !== 'KENTONGAN') {
+            throw new Error("Syntax: PASANG KENTONGAN [nama] PADA ...");
+        }
+
+        const triggerName = tokens[2];
+        if (!triggerName) {
+            throw new Error("Trigger name required");
+        }
+
+        if (tokens[3].toUpperCase() !== 'PADA') {
+            throw new Error("Expected PADA after trigger name");
+        }
+
+        const timing = tokens[4]; // BEFORE or AFTER
+        const event = tokens[5]; // INSERT, UPDATE, DELETE
+        const tableName = tokens[6];
+
+        if (tokens[7].toUpperCase() !== 'LAKUKAN') {
+            throw new Error("Expected LAKUKAN before action query");
+        }
+
+        // Rest is the action query
+        const action = tokens.slice(8).join(' ');
+
+        return {
+            type: 'CREATE_TRIGGER',
+            name: triggerName,
+            timing,
+            event,
+            table: tableName,
+            action
+        };
+    }
+
+    parseDropTrigger(tokens) {
+        // BUANG KENTONGAN [nama]
+        if (tokens[0].toUpperCase() !== 'BUANG' || tokens[1].toUpperCase() !== 'KENTONGAN') {
+            throw new Error("Syntax: BUANG KENTONGAN [nama]");
+        }
+
+        const triggerName = tokens[2];
+        if (!triggerName) {
+            throw new Error("Trigger name required");
+        }
+
+        return { type: 'DROP_TRIGGER', name: triggerName };
+    }
+
+    parseStoredProcedure(tokens) {
+        // SIMPAN SOP [nama] (@param1, @param2) SEBAGAI [query]
+        if (tokens[0].toUpperCase() !== 'SIMPAN' || tokens[1].toUpperCase() !== 'SOP') {
+            throw new Error("Syntax: SIMPAN SOP [nama] (...) SEBAGAI [query]");
+        }
+
+        const procName = tokens[2];
+        if (!procName) {
+            throw new Error("Procedure name required");
+        }
+
+        // Parse parameters
+        let i = 3;
+        const params = [];
+
+        if (tokens[i] === '(') {
+            i++;
+            while (tokens[i] !== ')') {
+                if (tokens[i] !== ',') {
+                    params.push(tokens[i]);
+                }
+                i++;
+            }
+            i++; // Skip closing )
+        }
+
+        if (tokens[i].toUpperCase() !== 'SEBAGAI') {
+            throw new Error("Expected SEBAGAI after parameters");
+        }
+        i++;
+
+        // Rest is the procedure body
+        const body = tokens.slice(i).join(' ');
+
+        return { type: 'CREATE_PROCEDURE', name: procName, params, body };
+    }
+
+    parseExecuteProcedure(tokens) {
+        // JALANKAN SOP [nama] (value1, value2)
+        if (tokens[0].toUpperCase() !== 'JALANKAN' || tokens[1].toUpperCase() !== 'SOP') {
+            throw new Error("Syntax: JALANKAN SOP [nama] (...)");
+        }
+
+        const procName = tokens[2];
+        if (!procName) {
+            throw new Error("Procedure name required");
+        }
+
+        // Parse arguments
+        let i = 3;
+        const args = [];
+
+        if (tokens[i] === '(') {
+            i++;
+            while (tokens[i] !== ')') {
+                if (tokens[i] !== ',') {
+                    let val = tokens[i];
+                    // Parse value
+                    if (val.startsWith("'") || val.startsWith('"')) {
+                        val = val.slice(1, -1);
+                    } else if (!isNaN(val)) {
+                        val = Number(val);
+                    }
+                    args.push(val);
+                }
+                i++;
+            }
+        }
+
+        return { type: 'EXECUTE_PROCEDURE', name: procName, args };
+    }
+
+    parseBackup(tokens) {
+        // CADANGKAN LUMBUNG KE [path]
+        if (tokens[0].toUpperCase() !== 'CADANGKAN' || tokens[1].toUpperCase() !== 'LUMBUNG') {
+            throw new Error("Syntax: CADANGKAN LUMBUNG KE [path]");
+        }
+
+        if (tokens[2].toUpperCase() !== 'KE') {
+            throw new Error("Expected KE after LUMBUNG");
+        }
+
+        const backupPath = tokens[3];
+        if (!backupPath) {
+            throw new Error("Backup path required");
+        }
+
+        // Remove quotes if present
+        const path = backupPath.startsWith("'") || backupPath.startsWith('"')
+            ? backupPath.slice(1, -1)
+            : backupPath;
+
+        return { type: 'BACKUP', path };
+    }
+
+    parseRestore(tokens) {
+        // PULIHKAN LUMBUNG DARI [path]
+        if (tokens[0].toUpperCase() !== 'PULIHKAN' || tokens[1].toUpperCase() !== 'LUMBUNG') {
+            throw new Error("Syntax: PULIHKAN LUMBUNG DARI [path]");
+        }
+
+        if (tokens[2].toUpperCase() !== 'DARI') {
+            throw new Error("Expected DARI after LUMBUNG");
+        }
+
+        const backupPath = tokens[3];
+        if (!backupPath) {
+            throw new Error("Backup path required");
+        }
+
+        // Remove quotes if present
+        const path = backupPath.startsWith("'") || backupPath.startsWith('"')
+            ? backupPath.slice(1, -1)
+            : backupPath;
+
+        return { type: 'RESTORE', path };
     }
 }
 

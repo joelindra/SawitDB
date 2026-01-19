@@ -35,12 +35,18 @@ Please support our brothers and sisters in Aceh.
 - **Zero Bureaucracy (Zero Deps)**: Built entirely with standard Node.js. No unnecessary "Vendor Pengadaan" or "Mark-up Anggaran".
 - **Transparansi**: Query language is clear. No "Pasal Karet" (Ambiguous Laws) or "Rapat Tertutup" in 5-star hotels.
 - **Speed**: Faster than printing an e-KTP at the Kelurahan.
-- **Network Support (NEW)**: Client-Server architecture with Multi-database support and Authentication.
-- **True Multi-Threading (NEW)**: Worker Pool architecture separates IO (Main Thread) from CPU (Worker Threads).
-- **Advanced SQL (NEW)**: Support for `JOIN` (Left/Right/Full/Cross), `JAVING`, `DISTINCT`, and more.
-- **NPM Support (NEW)**: Install via `npm install @wowoengine/sawitdb`.
+- **Network Support**: Client-Server architecture with Multi-database support and Authentication.
+- **True Multi-Threading**: Worker Pool architecture separates IO (Main Thread) from CPU (Worker Threads).
+- **Advanced SQL**: Support for `JOIN` (Left/Right/Full/Cross), `HAVING`, `DISTINCT`, and more.
+- **NPM Support**: Install via `npm install @wowoengine/sawitdb`.
 - **AKAD Transactions (v3.0)**: ACID-compliant transactions with `MULAI AKAD`, `SAHKAN`, `BATALKAN`.
 - **TEROPONG Views (v3.0)**: Virtual tables with `PASANG TEROPONG` and `BUANG TEROPONG`.
+- **SERTIFIKASI LAHAN (v3.1)**: Schema validation with type checking and constraints.
+- **BUKU KAS DESA (v3.1)**: Tamper-evident audit logging for all data modifications.
+- **KENTONGAN (v3.1)**: Database triggers for automated actions on INSERT/UPDATE/DELETE.
+- **SOP (v3.1)**: Stored procedures for reusable query sequences.
+- **CADANGAN LUMBUNG (v3.1)**: Hot backup and restore with point-in-time recovery.
+- **STATISTIK PANEN (v3.1)**: Comprehensive database and query performance statistics.
 
 ## Filosofi
 

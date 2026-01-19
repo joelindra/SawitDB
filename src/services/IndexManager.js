@@ -125,6 +125,20 @@ class IndexManager {
         }
     }
 
+    /**
+     * List indexes for a table (returns array)
+     * @param {string} tableName - Table name
+     */
+    listIndexes(tableName) {
+        const indexes = [];
+        for (const [key, index] of this.indexes) {
+            if (key.startsWith(tableName + '.')) {
+                indexes.push(index.stats());
+            }
+        }
+        return indexes;
+    }
+
     // Initial loader
     loadIndexes() {
         if (!this.db._select) return; // Wait until ready?

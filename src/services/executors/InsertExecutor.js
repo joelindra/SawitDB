@@ -33,13 +33,29 @@ class InsertExecutor extends QueryExecutor {
 
         if (!entry) throw new Error(`Kebun '${table}' tidak ditemukan.`);
 
+        // Validate and transform data using schema if defined
+        const validatedDataArray = [];
+        for (const data of dataArray) {
+            const validatedData = this.db.schemaManager
+                ? this.db.schemaManager.validateData(table, data)
+                : data;
+            validatedDataArray.push(validatedData);
+        }
+
+        // Execute BEFORE INSERT triggers
+        if (this.db.triggerManager) {
+            for (const data of validatedDataArray) {
+                this.db.triggerManager.executeTriggers(table, 'INSERT', 'BEFORE', { new: data });
+            }
+        }
+
         let currentPageId = entry.lastPage;
         let pData = this.db.pager.readPage(currentPageId);
         let freeOffset = pData.readUInt16LE(6);
         let count = pData.readUInt16LE(4);
         let startPageChanged = false;
 
-        for (const data of dataArray) {
+        for (const data of validatedDataArray) {
             const dataStr = JSON.stringify(data);
             const dataBuf = Buffer.from(dataStr, 'utf8');
             const recordLen = dataBuf.length;
@@ -87,6 +103,11 @@ class InsertExecutor extends QueryExecutor {
                     this.db._updateIndexes(table, data, null);
                 }
             }
+
+            // Audit logging
+            if (this.db.auditLogger && table !== '_audit') {
+                this.db.auditLogger.logInsert(table, data);
+            }
         }
 
         // Final write
@@ -102,11 +123,18 @@ class InsertExecutor extends QueryExecutor {
             }
         }
 
-        if (this.db.dbevent && this.db.dbevent.OnTableInserted) {
-            this.db.dbevent.OnTableInserted(table, dataArray, this.db.queryString);
+        // Execute AFTER INSERT triggers
+        if (this.db.triggerManager) {
+            for (const data of validatedDataArray) {
+                this.db.triggerManager.executeTriggers(table, 'INSERT', 'AFTER', { new: data });
+            }
         }
 
-        return `${dataArray.length} bibit tertanam.`;
+        if (this.db.dbevent && this.db.dbevent.OnTableInserted) {
+            this.db.dbevent.OnTableInserted(table, validatedDataArray, this.db.queryString);
+        }
+
+        return `${validatedDataArray.length} bibit tertanam.`;
     }
 }
 

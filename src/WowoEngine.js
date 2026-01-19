@@ -10,6 +10,12 @@ const IndexManager = require('./services/IndexManager');
 const ConditionEvaluator = require('./services/logic/ConditionEvaluator');
 const TransactionManager = require('./services/TransactionManager');
 const ViewManager = require('./services/ViewManager');
+const SchemaManager = require('./services/SchemaManager');
+const AuditLogger = require('./services/AuditLogger');
+const TriggerManager = require('./services/TriggerManager');
+const ProcedureManager = require('./services/ProcedureManager');
+const BackupManager = require('./services/BackupManager');
+const StatsManager = require('./services/StatsManager');
 
 // Executors
 const SelectExecutor = require('./services/executors/SelectExecutor');
@@ -43,6 +49,8 @@ class SawitDB {
         this.pager = new Pager(filePath, this.wal);
         this.indexes = new Map(); // Map of 'tableName.fieldName' -> BTreeIndex
         this.parser = new QueryParser();
+        this.dbPath = filePath;
+        this.dbName = filePath.split('/').pop().replace('.sawit', '');
 
         // CACHE: Simple LRU for Parsed Queries
         this.queryCache = new Map();
@@ -54,6 +62,12 @@ class SawitDB {
         this.conditionEvaluator = new ConditionEvaluator();
         this.transactionManager = new TransactionManager(this);
         this.viewManager = new ViewManager(this);
+        this.schemaManager = new SchemaManager(this);
+        this.auditLogger = new AuditLogger(filePath, options.audit || {});
+        this.triggerManager = new TriggerManager(this);
+        this.procedureManager = new ProcedureManager(this);
+        this.backupManager = new BackupManager(this);
+        this.statsManager = new StatsManager(this);
 
         // Initialize Executors
         this.selectExecutor = new SelectExecutor(this);
@@ -81,11 +95,29 @@ class SawitDB {
 
         // Load Views
         this.viewManager.loadViews();
+
+        // Initialize Schema Manager
+        this.schemaManager.init();
+
+        // Initialize Audit Logger
+        this.auditLogger.init();
+
+        // Initialize Trigger Manager
+        this.triggerManager.init();
+
+        // Initialize Procedure Manager
+        this.procedureManager.init();
+
+        // Initialize Stats Manager
+        this.statsManager.init();
     }
 
     close() {
         if (this.wal) {
             this.wal.close();
+        }
+        if (this.auditLogger) {
+            this.auditLogger.close();
         }
         if (this.pager) {
             this.pager.close();
@@ -205,6 +237,33 @@ class SawitDB {
 
                 case 'DROP_VIEW':
                     return this.viewManager.dropView(cmd.viewName);
+
+                case 'DEFINE_SCHEMA':
+                    return this.schemaManager.defineSchema(cmd.table, cmd.schema);
+
+                case 'CREATE_TRIGGER':
+                    return this.triggerManager.createTrigger(cmd.name, cmd.timing, cmd.event, cmd.table, cmd.action);
+
+                case 'DROP_TRIGGER':
+                    return this.triggerManager.dropTrigger(cmd.name);
+
+                case 'CREATE_PROCEDURE':
+                    return this.procedureManager.createProcedure(cmd.name, cmd.params, cmd.body);
+
+                case 'EXECUTE_PROCEDURE':
+                    return this.procedureManager.executeProcedure(cmd.name, cmd.args);
+
+                case 'BACKUP':
+                    return this.backupManager.createBackup(cmd.path);
+
+                case 'RESTORE':
+                    return this.backupManager.restoreBackup(cmd.path);
+
+                case 'SHOW_STATS':
+                    if (cmd.table) {
+                        return this.statsManager.getTableStats(cmd.table);
+                    }
+                    return this.statsManager.getDatabaseSummary();
 
                 default:
                     return `Perintah tidak dikenal atau belum diimplementasikan di Engine Refactor.`;

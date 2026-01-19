@@ -2,6 +2,148 @@
 
 All notable changes to this project will be documented in file.
 
+## [v3.1.0] - 2026-01-19
+
+### Major Features - Production-Ready Enhancements
+
+#### SERTIFIKASI LAHAN (Schema Validation) - Data Type Enforcement
+- **Schema Definition**: Define and enforce data types for table columns
+- **AQL Syntax**: `SERTIFIKASI LAHAN [table] ( [col] [type] [modifiers], ... )`
+- **Supported Types**:
+    - `TEKS` / `STRING` - Text data
+    - `ANGKA` / `NUMBER` - Numeric data
+    - `TANGGAL` / `DATE` - Date/time data
+    - `BENAR_SALAH` / `BOOLEAN` - Boolean data
+- **Modifiers**:
+    - `WAJIB` / `REQUIRED` - Field is required
+    - `DEFAULT [value]` / `BAWAAN [value]` - Default value
+- **Implementation**:
+    - New `SchemaManager.js` service for schema storage and validation
+    - Automatic validation on `TANAM` (INSERT) and `PUPUK` (UPDATE)
+    - Schema stored in `_schemas` system table
+- **Benefits**:
+    - Prevent data corruption from type mismatches
+    - Enforce business rules at database level
+    - Improved data quality and consistency
+
+#### BUKU KAS DESA (Audit Logging) - Tamper-Evident Logging
+- **Audit Trail**: Automatic logging of all data modifications
+- **Implementation**:
+    - New `AuditLogger.js` service
+    - Separate `.audit` file for audit records
+    - SHA-256 hash for integrity verification
+- **Logged Information**:
+    - Timestamp (ISO 8601)
+    - Session/User ID
+    - Operation type (INSERT, UPDATE, DELETE)
+    - Affected table
+    - Before/After values (for UPDATE)
+    - Integrity hash
+- **Benefits**:
+    - Full audit trail for compliance
+    - Tamper detection
+    - Forensic analysis capability
+
+#### KENTONGAN (Triggers) - Event Automation
+- **Database Triggers**: Automate actions on data events
+- **AQL Syntax**:
+    - Create: `PASANG KENTONGAN [nama] PADA [BEFORE|AFTER] [INSERT|UPDATE|DELETE] [table] LAKUKAN [query]`
+    - Drop: `BUANG KENTONGAN [nama]`
+- **Implementation**:
+    - New `TriggerManager.js` service
+    - Triggers stored in `_triggers` system table
+    - Synchronous execution within transaction scope
+- **Timing Options**:
+    - `BEFORE` - Execute before the operation
+    - `AFTER` - Execute after the operation
+- **Benefits**:
+    - Automated data validation
+    - Cascade operations
+    - Business logic enforcement
+
+#### SOP (Stored Procedures) - Reusable Query Sequences
+- **Stored Procedures**: Save and execute complex query sequences
+- **AQL Syntax**:
+    - Create: `SIMPAN SOP [nama] (@param1, @param2) SEBAGAI [query]`
+    - Execute: `JALANKAN SOP [nama] (value1, value2)`
+- **Implementation**:
+    - New `ProcedureManager.js` service
+    - Procedures stored in `_procedures` system table
+    - Parameter binding support
+- **Benefits**:
+    - Code reusability
+    - Simplified complex operations
+    - Consistent business logic
+
+#### CADANGAN LUMBUNG (Backup & Restore) - Data Protection
+- **Hot Backup**: Backup database while running
+- **AQL Syntax**:
+    - Backup: `CADANGKAN LUMBUNG KE [path]`
+    - Restore: `PULIHKAN LUMBUNG DARI [path]`
+- **Implementation**:
+    - New `BackupManager.js` service
+    - Copies `.sawit` and `.wal` files
+    - Metadata file for backup information
+- **Features**:
+    - Hot backup (no downtime)
+    - Point-in-time recovery
+    - Backup metadata tracking
+- **Benefits**:
+    - Disaster recovery
+    - Data migration
+    - Testing with production data
+
+#### STATISTIK PANEN (Database Statistics) - Performance Insights
+- **Performance Monitoring**: Track database health and query performance
+- **AQL Syntax**:
+    - Table stats: `LIHAT STATISTIK [table]`
+    - Database summary: `LIHAT STATISTIK`
+- **Implementation**:
+    - New `StatsManager.js` service
+    - Real-time statistics collection
+- **Metrics Tracked**:
+    - Table sizes (row count, disk usage)
+    - Index usage statistics
+    - Query performance (execution time, frequency)
+    - Cache hit/miss ratios
+    - Transaction throughput
+- **Benefits**:
+    - Performance optimization
+    - Capacity planning
+    - Slow query identification
+
+### Architecture Changes
+- **New Services**:
+    - `src/services/SchemaManager.js` - Schema definition and validation
+    - `src/services/AuditLogger.js` - Audit trail management
+    - `src/services/TriggerManager.js` - Trigger lifecycle management
+    - `src/services/ProcedureManager.js` - Stored procedure management
+    - `src/services/BackupManager.js` - Backup and restore operations
+    - `src/services/StatsManager.js` - Statistics collection and reporting
+- **Parser Enhancements**:
+    - Added parsing for `SERTIFIKASI`, `KENTONGAN`, `SOP`, `CADANGKAN`, `PULIHKAN`
+    - Extended command types: `DEFINE_SCHEMA`, `CREATE_TRIGGER`, `DROP_TRIGGER`, `CREATE_PROCEDURE`, `EXECUTE_PROCEDURE`, `BACKUP`, `RESTORE`, `SHOW_STATS`
+- **Engine Integration**:
+    - Schema validation in INSERT/UPDATE executors
+    - Trigger execution hooks (BEFORE/AFTER)
+    - Audit logging for all mutations
+    - Statistics tracking for all operations
+
+### Testing
+- **New Test Suites**:
+    - `tests/schema_validation_test.js` - Schema validation tests
+    - `tests/audit_log_test.js` - Audit logging and integrity tests
+    - `tests/trigger_test.js` - Trigger functionality tests
+    - `tests/stored_procedure_test.js` - Stored procedure tests
+    - `tests/backup_restore_test.js` - Backup and restore tests
+    - `tests/stats_test.js` - Statistics collection tests
+
+### Documentation
+- **Updated**: `README.md` - Added v3.1 features to feature list
+- **Updated**: `CHANGELOG.md` - Comprehensive v3.1 release notes
+
+---
+
 ## [v3.0.0] - UPCOMMING
 
 ### Major Features - AKAD & TEROPONG
